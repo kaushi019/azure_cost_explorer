@@ -1,33 +1,116 @@
+from azure.mgmt.costmanagement        import CostManagementClient
+from azure.mgmt.costmanagement.models import QueryAggregation,QueryGrouping,QueryDataset,QueryDefinition,QueryTimePeriod,QueryFilter,QueryComparisonExpression
+from azure.mgmt.resource              import ResourceManagementClient
+from azure.identity                   import DefaultAzureCredential
+from IPython.display                  import display, HTML
+from typing                           import ContextManager
+from azure.identity import ClientSecretCredential
 
-import adal
-import requests
+import json
+import pandas as pd
+import datetime as dt
+import calendar
+import numpy as np
 
-context = adal.acquire_token_with_client_credentials(
-'https://login.windows.net/' + '45cc25b3-b349-4a79-a6f1-2cefee3383fb',
-    '4df6f284-6bc1-46a9-b9f7-4337061e809c',
-    'K6N8Q~7Hn99za4mM1nj4gCedQRPGmVRcGYccndd2'
+
+authority = 'https://login.microsoftonline.com'
+tenant_id = {
+    'VK' : '45cc25b3-b349-4a79-a6f1-2cefee3383fb',
+    'KV' : '19d34b9b-ff87-409e-83f0-197d456e8547'
+} 
+client_id = {
+    'VK' : '4df6f284-6bc1-46a9-b9f7-4337061e809c',
+    'KV' : '486c2b62-b02a-4e11-83ca-646da9068223'
+}
+client_secret = {
+    'VK' : 'K6N8Q~7Hn99za4mM1nj4gCedQRPGmVRcGYccndd2',
+    'KV' : 'ksk8Q~FX9rGZvV.5uYPOquQZywpTJ9oqOFTN_dh0'
+}
+subscription_id = {
+    'VK' : '119915bf-9cdc-404c-ab5e-c7bcae1adb7e',
+    'KV' : '5c057149-3b68-448d-8621-f2dae62d2f35'
+}
+
+
+credential = ClientSecretCredential(tenant_id['VK'], client_id['VK'], client_secret['VK'], authority=authority)
+
+
+thedate = dt.datetime.combine(dt.date.today(), dt.time())
+first = thedate.replace(day=1)
+last = thedate.replace(day = calendar.monthrange(thedate.year, thedate.month)[1])
+
+subscription_id = '119915bf-9cdc-404c-ab5e-c7bcae1adb7e'
+
+scope = '/subscriptions/{}'.format(subscription_id)
+
+client = ResourceManagementClient(credential, subscription_id)
+
+cmgmtc = CostManagementClient(credential = credential,subscription_id=subscription_id)
+
+"""
+'ResourceGroup','ResourceGroupName','ResourceLocation',
+'ConsumedService','ResourceType','ResourceId',
+'MeterId','BillingMonth','MeterCategory',
+'MeterSubcategory','Meter','AccountName',
+'DepartmentName','SubscriptionId','SubscriptionName',
+'ServiceName','ServiceTier','EnrollmentAccountName',
+'BillingAccountId','ResourceGuid','BillingPeriod',
+'InvoiceNumber','ChargeType','PublisherType',
+'ReservationId','ReservationName','Frequency',
+'PartNumber','CostAllocationRuleName','MarkupRuleName',
+'PricingModel','BenefitId','BenefitName',''
+"""
+
+
+query_template = ( 
+  QueryDefinition( 
+     type      = "ActualCost"
+    , timeframe = "ThisMonth" 
+   , dataset   = 
+     QueryDataset(
+        granularity  = "Monthly"
+      , aggregation  = { 
+        "totalCost": QueryAggregation(name = "Cost", function = "Sum")
+        ,"totalCostUSD": QueryAggregation(name = "CostUSD", function = "Sum") 
+        }
+      , grouping     = [
+             QueryGrouping(name = "ResourceGroupName", type = "Dimension")
+            ,QueryGrouping(name = "ResourceId"       , type = "Dimension")
+            ,QueryGrouping(name = "ResourceType"     , type = "Dimension")
+        ]
+      , filter =  
+        QueryFilter(
+          dimensions = 
+            QueryComparisonExpression(
+                name = "ResourceGroupName"
+              , operator = "In"
+              , values = ["RESOURCE_GROUP"]
+            )
+        )
+     )
+  )
 )
-resource = 'https://management.azure.com/'
-application_id = '4df6f284-6bc1-46a9-b9f7-4337061e809c'
-application_secret = 'K6N8Q~7Hn99za4mM1nj4gCedQRPGmVRcGYccndd2'
-
-print(context)
-
-
-# token_response = context.acquire_token_with_client_credentials(resource, application_id, application_secret)
 
 
 
-access_token = context.get('accessToken')
+replaced_query = (
+  query_template.deserialize(
+    json.loads(
+      json.dumps(
+        query_template.serialize()
+      ).replace('RESOURCE_GROUP','destination_rg')
+    )
+  )
+)
 
-exit()
+result = cmgmtc.query.usage( scope = scope, parameters = replaced_query)
 
-url = 'https://management.azure.com/subscriptions/119915bf-9cdc-404c-ab5e-c7bcae1adb7e/resourceGroups/practice/providers/Microsoft.Storage/storageAccounts/kaushik1adlsgen2?api-version=2019-04-01'
-headers = {"Authorization": 'Bearer ' + access_token}
+data = pd.DataFrame(result.rows, columns = list(map(lambda col: col.name, result.columns)))
+ 
+data_sorted = data.sort_values(by='CostUSD' ,ascending = False)
 
-response = requests.get(url=url,headers = headers)
-print(response.status_code)
-print(response.text)
+data_filtered = data_sorted
 
+pd.set_option('display.max_rows', data_filtered.shape[0]+1)
 
-
+display(HTML(data_filtered.to_html())) 

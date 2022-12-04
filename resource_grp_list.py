@@ -22,10 +22,12 @@ resource_client = ResourceManagementClient(credential, subscription_id)
 group_list = resource_client.resource_groups.list()
 column_width = 40
 
+
+print(type(group_list))
+
 print("Resource Group".ljust(column_width) + "Location")
 print("-" * (column_width * 2))
 
-print(type(group_list))
 
 for group in list(group_list):
     print(f"{group.name:<{column_width}}{group.location}")
