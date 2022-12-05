@@ -2,6 +2,7 @@ from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.billing import BillingManagementClient
 from azure.mgmt.costmanagement import CostManagementClient
+from azure.mgmt.costmanagement.models import QueryAggregation,QueryGrouping,QueryDataset,QueryDefinition,QueryTimePeriod,QueryFilter,QueryComparisonExpression
 
 import json
 
@@ -53,14 +54,20 @@ invoices = billing_client.invoices.list_by_billing_subscription('2022-11-08','20
 
 
 available_bal = billing_client.available_balances.get(billing_profile_name=billing_profile['VK'],billing_account_name=billing_id['VK'])
-# addr = billing_client.address
-
-a = cost_client.generate_reservation_details_report.begin_by_billing_profile_id
+addr = billing_client.address
 
 
-# print(available_bal)
-# print(json.dumps(addr))
+# billing_client.address
+# response = cost_client.dimensions.by_external_cloud_provider_type(
+#         external_cloud_provider_type="externalBillingAccounts",
+#         external_cloud_provider_id="100",
+# )
+# for item in response:
+#     print(item)
 
-print(a)
+
+print(available_bal)
+print(addr)
+print(billing_client.available_balances.get)
 
 

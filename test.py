@@ -47,20 +47,6 @@ client = ResourceManagementClient(credential, subscription_id)
 
 cmgmtc = CostManagementClient(credential = credential,subscription_id=subscription_id)
 
-"""
-'ResourceGroup','ResourceGroupName','ResourceLocation',
-'ConsumedService','ResourceType','ResourceId',
-'MeterId','BillingMonth','MeterCategory',
-'MeterSubcategory','Meter','AccountName',
-'DepartmentName','SubscriptionId','SubscriptionName',
-'ServiceName','ServiceTier','EnrollmentAccountName',
-'BillingAccountId','ResourceGuid','BillingPeriod',
-'InvoiceNumber','ChargeType','PublisherType',
-'ReservationId','ReservationName','Frequency',
-'PartNumber','CostAllocationRuleName','MarkupRuleName',
-'PricingModel','BenefitId','BenefitName',''
-"""
-
 
 query_template = ( 
   QueryDefinition( 
@@ -103,14 +89,25 @@ replaced_query = (
   )
 )
 
-result = cmgmtc.query.usage( scope = scope, parameters = replaced_query)
+print(query_template)
 
-data = pd.DataFrame(result.rows, columns = list(map(lambda col: col.name, result.columns)))
+print(replaced_query)
+
+# response = cmgmtc.dimensions.by_external_cloud_provider_type(
+#         external_cloud_provider_type="externalBillingAccounts",
+#         external_cloud_provider_id="100",
+# )
+# for item in response:
+#     print(item)
+
+# result = cmgmtc.query.usage( scope = scope, parameters = replaced_query)
+
+# data = pd.DataFrame(result.rows, columns = list(map(lambda col: col.name, result.columns)))
  
-data_sorted = data.sort_values(by='CostUSD' ,ascending = False)
+# data_sorted = data.sort_values(by='CostUSD' ,ascending = False)
 
-data_filtered = data_sorted
+# data_filtered = data_sorted
 
-pd.set_option('display.max_rows', data_filtered.shape[0]+1)
+# pd.set_option('display.max_rows', data_filtered.shape[0]+1)
 
-display(HTML(data_filtered.to_html())) 
+# display(HTML(data_filtered.to_html())) 
